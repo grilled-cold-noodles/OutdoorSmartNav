@@ -1,15 +1,14 @@
 <component name="libraryTable">
   <library name="Gradle: com.android.support.test:runner:0.5@aar">
-    <ANNOTATIONS>
-      <root url="jar://C:/androidstudio/caches/transforms-2/files-2.1/ecc8f056c26170195c42eea6177e30cf/annotations.zip!/" />
-    </ANNOTATIONS>
     <CLASSES>
-      <root url="file://C:/androidstudio/caches/transforms-2/files-2.1/ecc8f056c26170195c42eea6177e30cf/res" />
-      <root url="jar://C:/androidstudio/caches/transforms-2/files-2.1/ecc8f056c26170195c42eea6177e30cf/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.android/build-cache/fa9b83bb75a3c431a9f92cda7716bf925af3ef48/output/res" />
+      <root url="jar://$USER_HOME$/.android/build-cache/fa9b83bb75a3c431a9f92cda7716bf925af3ef48/output/jars/classes.jar!/" />
     </CLASSES>
-    <JAVADOC />
+    <JAVADOC>
+      <root url="jar://D:/AndroidSDK/android-sdk_r24.4.1-windows/android-sdk-windows/extras/android/m2repository/com/android/support/test/runner/0.5/runner-0.5-javadoc.jar!/" />
+    </JAVADOC>
     <SOURCES>
-      <root url="jar://C:/androidstudio/caches/modules-2/files-2.1/com.android.support.test/runner/0.5/d13156b1f4d8dc7013cd8b3b1284b22bd3b44d23/runner-0.5-sources.jar!/" />
+      <root url="jar://D:/AndroidSDK/android-sdk_r24.4.1-windows/android-sdk-windows/extras/android/m2repository/com/android/support/test/runner/0.5/runner-0.5-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

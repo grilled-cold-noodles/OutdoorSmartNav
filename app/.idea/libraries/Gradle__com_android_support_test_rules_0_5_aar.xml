@@ -1,15 +1,14 @@
 <component name="libraryTable">
   <library name="Gradle: com.android.support.test:rules:0.5@aar">
-    <ANNOTATIONS>
-      <root url="jar://C:/androidstudio/caches/transforms-2/files-2.1/a25a20018ba3e07121fda48755981840/annotations.zip!/" />
-    </ANNOTATIONS>
     <CLASSES>
-      <root url="file://C:/androidstudio/caches/transforms-2/files-2.1/a25a20018ba3e07121fda48755981840/res" />
-      <root url="jar://C:/androidstudio/caches/transforms-2/files-2.1/a25a20018ba3e07121fda48755981840/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.android/build-cache/fca59b33734dab6ed4dd55f4c20c6acdf0e0cbb8/output/res" />
+      <root url="jar://$USER_HOME$/.android/build-cache/fca59b33734dab6ed4dd55f4c20c6acdf0e0cbb8/output/jars/classes.jar!/" />
     </CLASSES>
-    <JAVADOC />
+    <JAVADOC>
+      <root url="jar://D:/AndroidSDK/android-sdk_r24.4.1-windows/android-sdk-windows/extras/android/m2repository/com/android/support/test/rules/0.5/rules-0.5-javadoc.jar!/" />
+    </JAVADOC>
     <SOURCES>
-      <root url="jar://C:/androidstudio/caches/modules-2/files-2.1/com.android.support.test/rules/0.5/eb0523edeca93697d4c4b767277b407ed5920258/rules-0.5-sources.jar!/" />
+      <root url="jar://D:/AndroidSDK/android-sdk_r24.4.1-windows/android-sdk-windows/extras/android/m2repository/com/android/support/test/rules/0.5/rules-0.5-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

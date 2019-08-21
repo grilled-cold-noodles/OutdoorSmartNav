@@ -73,6 +73,14 @@
                     android:background="@drawable/icon_btn_green"
                     android:layout_marginTop="2.5dp"
                     android:layout_marginRight="5dp"/>
+                <Button
+                    android:id="@+id/btn_speech"
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:text="@string/btn_speech"
+                    android:background="@drawable/icon_btn_green"
+                    android:layout_marginTop="2.5dp"
+                    android:layout_marginRight="5dp"/>
             </LinearLayout>
         </RelativeLayout>
         <RelativeLayout
@@ -338,7 +346,7 @@
                 android:layout_marginBottom="10dp"
                 android:gravity="center">
                 <Button
-                    android:id="@+id/btn_showCoord"
+                    android:id="@+id/btn_speak"
                     android:layout_width="25dp"
                     android:layout_height="25dp"
                     android:background="@drawable/icon_add"/>

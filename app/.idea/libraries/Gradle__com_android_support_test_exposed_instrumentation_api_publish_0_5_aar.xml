@@ -1,12 +1,14 @@
 <component name="libraryTable">
   <library name="Gradle: com.android.support.test:exposed-instrumentation-api-publish:0.5@aar">
     <CLASSES>
-      <root url="file://C:/androidstudio/caches/transforms-2/files-2.1/9ed9a0bb8869ded0b7ed1d19a1f091a2/res" />
-      <root url="jar://C:/androidstudio/caches/transforms-2/files-2.1/9ed9a0bb8869ded0b7ed1d19a1f091a2/jars/classes.jar!/" />
+      <root url="jar://$USER_HOME$/.android/build-cache/8bb6c4fd28a066c688b54ab29f58c64fc1e68c87/output/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.android/build-cache/8bb6c4fd28a066c688b54ab29f58c64fc1e68c87/output/res" />
     </CLASSES>
-    <JAVADOC />
+    <JAVADOC>
+      <root url="jar://D:/AndroidSDK/android-sdk_r24.4.1-windows/android-sdk-windows/extras/android/m2repository/com/android/support/test/exposed-instrumentation-api-publish/0.5/exposed-instrumentation-api-publish-0.5-javadoc.jar!/" />
+    </JAVADOC>
     <SOURCES>
-      <root url="jar://C:/androidstudio/caches/modules-2/files-2.1/com.android.support.test/exposed-instrumentation-api-publish/0.5/493e9b2f2905ddc7f1a152446cc1d9d00ded10b0/exposed-instrumentation-api-publish-0.5-sources.jar!/" />
+      <root url="jar://D:/AndroidSDK/android-sdk_r24.4.1-windows/android-sdk-windows/extras/android/m2repository/com/android/support/test/exposed-instrumentation-api-publish/0.5/exposed-instrumentation-api-publish-0.5-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

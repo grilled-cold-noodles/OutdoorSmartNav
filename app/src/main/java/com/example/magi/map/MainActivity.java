@@ -77,14 +77,27 @@ import com.baidu.navisdk.adapter.BNaviSettingManager;
 import com.baidu.navisdk.adapter.BaiduNaviManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.iflytek.cloud.ErrorCode;
+import com.iflytek.cloud.InitListener;
+import com.iflytek.cloud.RecognizerResult;
+import com.iflytek.cloud.SpeechConstant;
+import com.iflytek.cloud.SpeechError;
+import com.iflytek.cloud.SpeechSynthesizer;
+import com.iflytek.cloud.SpeechUtility;
+import com.iflytek.cloud.SynthesizerListener;
+import com.iflytek.cloud.ui.RecognizerDialog;
+import com.iflytek.cloud.ui.RecognizerDialogListener;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -109,8 +122,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private InputMethodManager inputManager; //输入法弹出框
     private Button btn_delete; //搜索输入框清空按钮
     private EditText et_search; //搜索输入框
-    private Button btn_showCoord;
-//    private TextView t;
+    private Button btn_speak;
 
     //控制器
     private BaiduMap mBaiduMap; //百度地图控件控制器
@@ -140,11 +152,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private LatLng endLatlng; //地图状态改变后中心坐标
     private boolean isNeedSearchPark; //地图状态改变后是否需要搜索停车场
     private DrivingRouteOverlay mDrivingRouteOverlay; //驾车路线覆盖物
-    private ArrayList<CarsInfo> carsInfos;  //附近车辆
+    private ArrayList<CarsInfo> carsInfos;  //从数据库获取的车辆信息
     private ArrayList<CarsInfo> testCars = new ArrayList<>();
-    private ArrayList<Marker> markers = new ArrayList<>();
-
-
+    private ArrayList<Marker> markers = new ArrayList<>();  //存储各个marker，重绘时便于清除
+    private HashMap<String, String> mIatResults = new LinkedHashMap<String, String>();  // 用HashMap存储听写结果
 
     //Handlers
     private Handler weatherHandler;
@@ -173,10 +184,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         getSearchHandler();
         getSuggestionHandler();
         mDrivingRouteOverlay = new DrivingRouteOverlay(mBaiduMap);
-        if (initDir()) {   //初始化语音缓存路径
+        if (initDir()) { //初始化语音缓存路径
             initNaviPath();
         }
+        initSpeech();  //初始化讯飞语音
     }
+
+
+
 
     @Override
     protected void onStart() {
@@ -186,6 +201,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initListListener();    //初始化列表监听
         initMapListener();     //初始化地图监听
         mBaiduMap.setOnMarkerClickListener(mDrivingRouteOverlay);
+        //mBaiduMap.setOnMarkerClickListener(markerListener);
         mBuilder = new AlertDialog.Builder(this);
         mBuilder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
             @Override
@@ -319,6 +335,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     showToast("请先选择目标");
                     break;
                 }
+                //初始化导航路线
                 initBNRoutePlan(new LatLng(myLocation.getLatitude(), myLocation.getLongitude()), touchPoint.getLocation(), touchPoint.getName());
                 break;
             case R.id.btn_detail:
@@ -340,10 +357,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn_delete:
                 et_search.setText("");
                 break;
-            case R.id.btn_showCoord:
-                //showToast("btn_showCoord被点击");
-                showToast("当前纬度:" + myLocation.getLatitude() + "当前经度：" + myLocation.getLongitude());
-                //showSurroundingCars();
+            case R.id.btn_speech:
+                //语音输入
+                speechInput();
+                break;
+            case R.id.btn_speak:
+                //语音输出
+                speechOutput();
+                break;
         }
     }
 
@@ -462,11 +483,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         try {
             Log.d("tracetrace", "getRequest()进入");
             OkHttpClient mOkHttpClient = new OkHttpClient();  //得到OkHttpClient对象
-            Log.d("tracetrace", "33333");
             Request.Builder builder = new Request.Builder();              //构造Request对象
-            Log.d("tracetrace", "44444");
             Request request = builder.get().url(requestUrl).build();
-            Log.d("tracetrace", "55555");
             Call mCall = mOkHttpClient.newCall(request);              //将Request封装为Call
             //开始执行Call
             //Response mResponse= mCall.execute();//同步方法
@@ -514,7 +532,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
     //向数据库查询车辆信息的线程
-    public void getSurroundingCars() {
+    public void showSurroundingCars() {
         Log.d("tracetrace", "getSurroundingCars()进入");
         new Thread(myRunnable).start();
     }
@@ -556,36 +574,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             LatLng me = new LatLng(myLocation.getLatitude(), myLocation.getLongitude());
             //与我相距4公里以内才显示
             //if (getKiloMeter(me, latLng) < 4) {
-                View view = LayoutInflater.from(getApplicationContext()).inflate(R.layout.mybitmap, null);
-                TextView tv_carinfo = (TextView) view.findViewById(R.id.tv_carinfo);
-                //            tv_carinfo.setBackgroundResource(R.drawable.corner_view);
-                tv_carinfo.setText(new StringBuilder().append(car.getSpeed()).append("km/h"));
-                //调用getViewBitmap函数生成位图
-                BitmapDescriptor markerIcon = BitmapDescriptorFactory.fromBitmap(getViewBitmap(view));
-                //创建一个bundle来辨别各个marker
-                Bundle mBundle = new Bundle();
-                mBundle.putInt("id", car.getId());
-                OverlayOptions oo = new MarkerOptions().position(latLng).icon(markerIcon).zIndex(9).extraInfo(mBundle);//.draggable(true);
-                Marker marker = (Marker) mBaiduMap.addOverlay(oo);
-                marker.setExtraInfo(mBundle);
-                markers.add(marker);
+            View view = LayoutInflater.from(getApplicationContext()).inflate(R.layout.mybitmap, null);
+            TextView tv_carinfo = (TextView) view.findViewById(R.id.tv_carinfo);
+            //            tv_carinfo.setBackgroundResource(R.drawable.corner_view);
+            tv_carinfo.setText(new StringBuilder().append(car.getSpeed()).append("km/h"));
+            //调用getViewBitmap函数生成位图
+            BitmapDescriptor markerIcon = BitmapDescriptorFactory.fromBitmap(getViewBitmap(view));
+            //创建一个bundle来辨别各个marker
+            Bundle mBundle = new Bundle();
+            mBundle.putInt("id", car.getId());
+            OverlayOptions oo = new MarkerOptions().position(latLng).icon(markerIcon).zIndex(9).extraInfo(mBundle);//.draggable(true);
+            Marker marker = (Marker) mBaiduMap.addOverlay(oo);
+            marker.setExtraInfo(mBundle);
+            markers.add(marker);
 
             //}
         }
     }
 
-
-    private void showSurroundingCars() {
-        Log.d("tracetrace", "showSurroundingCars()进入");
-        //mBaiduMap.clear();
-        getSurroundingCars();
+//    private void showSurroundingCars() {
+//        Log.d("tracetrace", "showSurroundingCars()进入");
+//        //mBaiduMap.clear();
+//        getSurroundingCars();
 //        BitmapDescriptor carPoint = BitmapDescriptorFactory.fromResource(R.drawable.icon_gcoding);
-//        for(CarsInfo car:carsInfos){
-//            LatLng latLng = new LatLng(car.getLatitude(),car.getLongitude());
-//            OverlayOptions options = new MarkerOptions().position(latLng).icon(carPoint).zIndex(8);//设置位置、设置图标样式、设置marker所在层级
-//            mBaiduMap.addOverlay(options);
-//        }
-
 //        testCars.clear();
 //        Log.d("tracetrace", "testCars.size(): " + testCars.size());
 //        testCars.add(new CarsInfo(1, "苏A10086", 32.0245, 118.8683, 50));
@@ -597,18 +608,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        testCars.add(new CarsInfo(6, "苏P10086", 32.0472, 118.7906, 83));
 //        testCars.add(new CarsInfo(7, "苏G10086", 31.9741, 118.8050, 55));
 //        testCars.add(new CarsInfo(8, "浙K43586", 32.0223, 118.7903, 28));
-
-//        //画没有信息的图钉
-//        BitmapDescriptor carPoint = BitmapDescriptorFactory.fromResource(R.drawable.icon_gcoding);
-//        for (CarsInfo testCar : testCars) {
-//            LatLng latLng = new LatLng(testCar.getLatitude(), testCar.getLongitude());
-//            OverlayOptions options = new MarkerOptions().position(latLng).icon(carPoint).zIndex(8);//设置位置、设置图标样式、设置marker所在层级
-//            mBaiduMap.addOverlay(options);
-//            //Log.d("tracetrace", "showSurroundingCars()完成");
-//        }
-
-
-    }
+//    }
 
     //初始化成员变量
     private void initMembers() {
@@ -628,8 +628,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         inputManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         btn_delete = (Button) findViewById(R.id.btn_delete);
         et_search = (EditText) findViewById(R.id.et_search);
-        btn_showCoord = (Button) findViewById(R.id.btn_showCoord);
-        Log.d("tracetrace", "initMenber()完成");
+        btn_speak = (Button) findViewById(R.id.btn_speak);
+        Log.d("tracetrace", "initMembers()完成");
     }
 
     //初始化控件（按钮、输入框）监听
@@ -643,13 +643,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         findViewById(R.id.btn_close).setOnClickListener(this);
         findViewById(R.id.btn_empty).setOnClickListener(this);
         findViewById(R.id.btn_list).setOnClickListener(this);
-        findViewById(R.id.btn_showCoord).setOnClickListener(this);
-//        findViewById(R.id.tv_sideText).setOnClickListener(this);
-        btn_go.setOnClickListener(this);
-        btn_detail.setOnClickListener(this);
+        findViewById(R.id.btn_speak).setOnClickListener(this);
+        findViewById(R.id.btn_speech).setOnClickListener(this);
+        findViewById(R.id.btn_speak).setOnClickListener(this);
         findViewById(R.id.btn_closeDetail).setOnClickListener(this);
         findViewById(R.id.btn_search).setOnClickListener(this);
         findViewById(R.id.btn_closeSuggestion).setOnClickListener(this);
+//      findViewById(R.id.tv_sideText).setOnClickListener(this);
+        btn_go.setOnClickListener(this);
+        btn_detail.setOnClickListener(this);
         btn_delete.setOnClickListener(this);
         //搜索框焦点监听器
         et_search.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -757,10 +759,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
+
+//        BaiduMap.OnMarkerClickListener markerListener = new BaiduMap.OnMarkerClickListener() {
+//            @Override
+//            public boolean onMarkerClick(Marker marker) {
+//                showToast("2323");
+//                //mBaiduMap.removeMarkerClickListener(markerListener);//不remove此marker会被执行多次
+//                return true;
+//            }
+//        };
+//        mBaiduMap.setOnMarkerClickListener(markerListener);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         //设置Marker点击监听
         mBaiduMap.setOnMarkerClickListener(new BaiduMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
+                Log.d("tracetrace","marker被按了一下");
+                showToast("不要再按我了啦");
                 if (marker.equals(mOverlay)) {
                     return false;
                 }
@@ -769,7 +799,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 tv_info_address.setText(info.getAddress());
                 touchPoint = info;
                 showBottomInfo(true, true);
-                mRoutePlanSearch.drivingSearch(new DrivingRoutePlanOption().from(PlanNode.withLocation(new LatLng(myLocation.getLatitude(), myLocation.getLongitude()))).to(PlanNode.withLocation(info.getLocation())).policy(DrivingRoutePlanOption.DrivingPolicy.ECAR_DIS_FIRST));
+                mRoutePlanSearch.drivingSearch(new DrivingRoutePlanOption()
+                        .from(PlanNode.withLocation(new LatLng(myLocation.getLatitude(), myLocation.getLongitude())))
+                        .to(PlanNode.withLocation(info.getLocation()))
+                        .policy(DrivingRoutePlanOption.DrivingPolicy.ECAR_DIS_FIRST));
                 return false;
             }
         });
@@ -924,6 +957,144 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    //初始化讯飞语音
+    private void initSpeech() {
+        SpeechUtility.createUtility(this, SpeechConstant.APPID + "=5d197925");
+    }
+
+
+    //语音输出
+    private void speechOutput() {
+        //1. 创建 SpeechSynthesizer 对象 , 第二个参数： 本地合成时传 InitListener
+        SpeechSynthesizer mTts = SpeechSynthesizer.createSynthesizer(this, null);
+        //2.合成参数设置
+        mTts.setParameter(SpeechConstant.VOICE_NAME, "vixyun"); // 设置发音人
+        mTts.setParameter(SpeechConstant.SPEED, "50");// 设置语速
+        mTts.setParameter(SpeechConstant.VOLUME, "80");// 设置音量，范围 0~100
+        mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD); //设置云端
+        //设置合成音频保存位置（可自定义保存位置），保存在 “./sdcard/iflytek.pcm”
+        //保存在 SD 卡需要在 AndroidManifest.xml 添加写 SD 卡权限
+        //仅支持保存为 pcm 和 wav 格式， 如果不需要保存合成音频，注释该行代码
+        mTts.setParameter(SpeechConstant.TTS_AUDIO_PATH, "./sdcard/iflytek.pcm");
+        //3.开始合成
+        mTts.startSpeaking(et_search.getText().toString(), new MySynthesizerListener());
+
+    }
+
+    //语音播报生命周期的类
+    class MySynthesizerListener implements SynthesizerListener {
+
+        @Override
+        public void onSpeakBegin() {
+            showToast(" 开始播放 ");
+        }
+
+        @Override
+        public void onSpeakPaused() {
+            showToast(" 暂停播放 ");
+        }
+
+        @Override
+        public void onSpeakResumed() {
+            showToast(" 继续播放 ");
+        }
+
+        @Override
+        public void onBufferProgress(int percent, int beginPos, int endPos, String info) {
+            // 合成进度
+        }
+
+        @Override
+        public void onSpeakProgress(int percent, int beginPos, int endPos) {
+            // 播放进度
+        }
+
+        @Override
+        public void onCompleted(SpeechError error) {
+            if (error == null) {
+                showToast("播放完成 ");
+            } else if (error != null) {
+//                showToast(error.getPlainDescription(true));
+            }
+        }
+
+        @Override
+        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) {
+            // 以下代码用于获取与云端的会话 id，当业务出错时将会话 id提供给技术支持人员，可用于查询会话日志，定位出错原因
+            // 若使用本地能力，会话 id为null
+            //if (SpeechEvent.EVENT_SESSION_ID == eventType) {
+            //     String sid = obj.getString(SpeechEvent.KEY_EVENT_SESSION_ID);
+            //}
+        }
+
+    }
+
+    //语音输入
+    private void speechInput() {
+        //1. 创建RecognizerDialog对象
+        RecognizerDialog mDialog = new RecognizerDialog(this, new MyInitListener());
+        //2. 设置accent、 language等参数
+        mDialog.setParameter(SpeechConstant.LANGUAGE, "zh_cn");// 设置中文
+        mDialog.setParameter(SpeechConstant.ACCENT, "mandarin");
+        // 若要将UI控件用于语义理解，必须添加以下参数设置，设置之后 onResult回调返回将是语义理解
+        // 结果
+        // mDialog.setParameter("asr_sch", "1");
+        // mDialog.setParameter("nlp_version", "2.0");
+        //3.设置回调接口
+        mDialog.setListener(new MyRecognizerDialogListener());
+        //4. 显示dialog，接收语音输入
+        mDialog.show();
+    }
+
+    //监听初始化
+    class MyInitListener implements InitListener {
+
+        @Override
+        public void onInit(int code) {
+            if (code != ErrorCode.SUCCESS) {
+                showToast("初始化失败 ");
+            }
+        }
+    }
+
+    class MyRecognizerDialogListener implements RecognizerDialogListener {
+
+        @Override
+        public void onResult(RecognizerResult results, boolean isLast) {
+            if(!isLast) {  //去掉末尾的句号
+                String result = results.getResultString(); //未解析的
+                String text = JsonParser.parseIatResult(result);//解析过后的
+                String sn = null;
+                // 读取json结果中的 sn字段
+                try {
+                    JSONObject resultJson = new JSONObject(results.getResultString());
+                    sn = resultJson.optString("sn");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                mIatResults.put(sn, text);//没有得到一句，添加到
+                StringBuffer resultBuffer = new StringBuffer();
+                for (String key : mIatResults.keySet()) {
+                    resultBuffer.append(mIatResults.get(key));
+                }
+
+                et_search.setText(resultBuffer.toString());// 设置输入框的文本
+                et_search.setSelection(et_search.length());//把光标定位末尾
+                if (((TextView) findViewById(R.id.et_search)).getText().toString().equals("")) {
+                    showToast("搜索内容不能为空");
+                }
+                getSuggestion(et_search.getText().toString().trim());
+                inputManager.hideSoftInputFromWindow(et_search.getWindowToken(), 0);
+            }
+        }
+
+        @Override
+        public void onError(SpeechError speechError) {
+
+        }
+
+    }
+
     //获取天气信息
     private void getWeather() {
         Thread thread = new Thread(new Runnable() {
@@ -1050,7 +1221,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     //初始化导航路线
     private void initBNRoutePlan(LatLng source, LatLng destination, String destinationName) {
-        BNRoutePlanNode startNode = new BNRoutePlanNode(source.longitude, source.latitude, "我", null, BNRoutePlanNode.CoordinateType.BD09LL);
+        BNRoutePlanNode startNode = new BNRoutePlanNode(source.longitude, source.latitude, "我我我", null, BNRoutePlanNode.CoordinateType.BD09LL);
         BNRoutePlanNode endNode = new BNRoutePlanNode(destination.longitude, destination.latitude, destinationName, null, BNRoutePlanNode.CoordinateType.BD09LL);
         if (startNode != null && endNode != null) {
             ArrayList<BNRoutePlanNode> lst = new ArrayList<>();
