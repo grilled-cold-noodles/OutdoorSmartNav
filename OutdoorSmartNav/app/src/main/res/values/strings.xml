@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">停车助手</string>
+
+    <string name="tv_weather">加载中……</string>
+    <string name="btn_search">搜索</string>
+    <string name="btn_speech">语音</string>
+    <string name="et_search_hint">请输入搜索的地名</string>
+    <string name="tv_detail_name">名称：</string>
+    <string name="tv_detail_address">地址：</string>
+    <string name="tv_detail_type">类型：</string>
+    <string name="tv_detail_empty">空车位：</string>
+    <string name="tv_detail_total">总车位：</string>
+    <string name="tv_detail_distance">距离：</string>
+    <string name="tv_detail_price">价格：</string>
+    <string name="btn_detail">详情</string>
+    <string name="btn_go">前往</string>
+
+</resources>
